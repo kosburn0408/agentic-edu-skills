@@ -17,6 +17,90 @@ It runs as a Docker container on your computer. No cloud, no subscription, no da
 
 ---
 
+## How to Use This Tool
+
+You don't need to be a programmer. Here are the three things most teachers do:
+
+### 📖 1. Check if a Book Is Right for Your Students
+
+> *"Is this chapter too hard for my 2nd graders?"*
+
+```python
+# Paste any text and get answers in seconds
+text = open("hooch-chapter1.txt").read()
+
+# How hard is it?
+compute_lexile(text)
+# → Lexile: 550L, Grade: 2 ✅
+
+# Can they sound out the words?
+check_decodability(text, grade="2")
+# → 78% decodable — some support needed for: "tributary", "observation"
+
+# Which words should I pre-teach?
+classify_text(text)
+# → Tier 2 words to teach: observe, investigate, protect
+```
+
+### 👤 2. Diagnose a Struggling Reader
+
+> *"Marcus guesses at words instead of sounding them out. What's going on?"*
+
+```python
+# Simple View of Reading diagnostic
+evaluate_simple_view(decoding=0.42, comprehension=0.80, grade="2nd")
+# → Profile: DYSLEXIA pattern
+# → Deficit codes: cvc_mixed, consonant_blends, consonant_digraphs
+# → 3 remediation cards auto-generated ← ready to print and use
+```
+
+### 🎯 3. Get a Lesson Plan for a Reading Deficit
+
+> *"I need a 5-minute small-group activity for silent-e. Right now."*
+
+```python
+# One call — full lesson plan
+card = get_instructional_remediation("cvce_silent_e", "2nd")
+
+# Print this and bring it to your reading group:
+print(card.to_markdown())
+```
+
+**What prints out:**
+```
+## 🎯 Instructional Remediation Card: Silent-e Pattern
+### 1. Pedagogy Brief (Micro-PD)
+The Silent-e Rule: Final-e makes the vowel say its name...
+> Research basis: NRP Phonics (d=0.48)
+
+### 2. Explicit Teaching Routine (I Do / We Do / You Do) — ~5 min
+🔵 I DO: Watch me read this word: /c/.../a/.../p/, cap. Now I add
+    silent-e: cape! The 'a' says its name.
+🟡 WE DO: Let's try together: kit→kite, hop→hope, not→note.
+🟢 YOU DO: Now you try: can→cane, pin→pine, cub→cube.
+
+### 3. Word Chain & Practice
+cap → cape → tape → tap → tape → shape
+Watch for: have (rule breaker!)
+
+### 4. Corrective Feedback
+❌ If incorrect: "I see a silent-e. What does it tell the vowel to do?"
+✅ If correct: "You spotted the silent-e! That's the rule!"
+```
+
+### 🔒 4. Keep Student Data Private
+
+```python
+# Student names NEVER leave your computer
+session = create_privacy_session("reading groups")
+# → Jane Doe becomes std_a3f27b8c — LLM sees only the token
+# After you're done:
+destroy_privacy_session(session)
+# → All PII erased. Zero data retention.
+```
+
+---
+
 ## Quick Start (5 Minutes)
 
 ### Step 1: Install Docker
