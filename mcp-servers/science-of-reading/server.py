@@ -419,6 +419,78 @@ def register_tools(server: FastMCP) -> None:
         from .remediation import list_available_remediations as list_r
         return list_r()
 
+    # ── Privacy & FERPA Compliance Tools ─────────────────────────────────────
+
+    @server.tool(
+        name="verify_privacy_status",
+        description=(
+            "Verify FERPA compliance: confirms ZDR mode is active, "
+            "PII sanitization is operational, and no raw PII is exposed "
+            "in tool schemas or logs."
+        ),
+    )
+    async def verify_privacy_status() -> dict[str, Any]:
+        from .privacy_sanitizer import get_pii_manager
+        return get_pii_manager().get_status()
+
+    @server.tool(
+        name="create_privacy_session",
+        description=(
+            "Create a new FERPA-compliant privacy session for student data. "
+            "Returns a session_id. All student records processed in this "
+            "session use synthetic tokens — real names never reach the LLM."
+        ),
+    )
+    async def create_privacy_session(label: str = "") -> dict[str, Any]:
+        from .privacy_sanitizer import get_pii_manager
+        sid = get_pii_manager().create_session(label)
+        return {"session_id": sid, "zdr": True}
+
+    @server.tool(
+        name="anonymize_student_data",
+        description=(
+            "Strip PII from student records and replace with synthetic tokens. "
+            "Provide a JSON array of student objects and a privacy_session_id. "
+            "Returns PII-free academic data safe for LLM processing."
+        ),
+    )
+    async def anonymize_student_data(
+        students_json: str,
+        privacy_session_id: str,
+    ) -> dict[str, Any]:
+        import json as _json
+        from .privacy_sanitizer import get_pii_manager
+
+        records = _json.loads(students_json)
+        if isinstance(records, dict):
+            records = [records]
+
+        # Attach session ID to each record
+        for r in records:
+            r["_session_id"] = privacy_session_id
+
+        mgr = get_pii_manager()
+        cleaned = mgr.anonymize_batch(records)
+
+        return {
+            "students": cleaned,
+            "session_id": privacy_session_id,
+            "total_sanitized": len(cleaned),
+        }
+
+    @server.tool(
+        name="destroy_privacy_session",
+        description=(
+            "Destroy a privacy session and ALL PII mappings (Zero Data "
+            "Retention). Call this when you're done with student data. "
+            "No PII survives on any storage medium."
+        ),
+    )
+    async def destroy_privacy_session(session_id: str) -> dict[str, Any]:
+        from .privacy_sanitizer import get_pii_manager
+        get_pii_manager().destroy_session(session_id)
+        return {"session_id": session_id, "destroyed": True, "zdr_enforced": True}
+
 
 # Register tools on the default stdio server
 register_tools(mcp)
