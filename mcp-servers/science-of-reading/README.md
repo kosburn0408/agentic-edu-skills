@@ -104,7 +104,7 @@ SoR MCP Server (FastMCP)
     └── DuckDB (embedded OLAP)
         ├── research_papers (12 papers, WWC/BEE/NRP)
         ├── vocabulary_corpus (74 words, K-3)
-        ├── standards (25 entries, 4 states)
+        ├── standards (43 entries, 5 states: CCSS, Georgia GSE, Texas TEKS, Florida B.E.S.T., New York)
         ├── assessments (11 tools)
         └── theoretical_frameworks (6 frameworks)
 ```
@@ -115,7 +115,7 @@ The embedded DuckDB database includes:
 
 - **12 research papers** with effect sizes (d=0.32 to d=0.75)
 - **74 vocabulary words** across grades K-3 with tier classification and decodability
-- **25 academic standards** from CCSS, Texas TEKS, Florida B.E.S.T., and New York
+- **43 academic standards** from CCSS, Georgia GSE, Texas TEKS, Florida B.E.S.T., and New York
 - **11 evidence-based assessments** (DIBELS, Acadience, MAP, CORE, PAST, QRI-6, etc.)
 - **6 theoretical frameworks** with full descriptions and references
 
