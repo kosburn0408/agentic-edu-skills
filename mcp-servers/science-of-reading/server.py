@@ -24,6 +24,10 @@ Tools exposed:
   - list_assessments        — Evidence-based assessment lookup
   - align_standards         — CASE framework standards alignment
   - match_word              — Single-word tier lookup
+  - evaluate_simple_view    — Simple View of Reading diagnostic
+  - get_instructional_remediation — Remediation card for a reading deficit
+  - recommend_decodable_resources — Decodable text constrained to mastered skills
+  - list_remediations       — List all available remediation deficit codes
 
 Usage:
   python server.py                          # stdio (for MCP clients)
@@ -301,6 +305,119 @@ def register_tools(server: FastMCP) -> None:
                 "across comprehension levels."
             ),
         }
+
+    # ── NEW: Instructional Remediation Tools ──────────────────────────────────
+
+    @server.tool(
+        name="evaluate_simple_view",
+        description=(
+            "Evaluate a student using the Simple View of Reading. "
+            "Returns reading profile (typical/dyslexia/hyperlexic/garden_variety), "
+            "deficit codes, and auto-attached remediation cards when decoding < 0.60."
+        ),
+    )
+    async def evaluate_simple_view(
+        decoding: float,
+        language_comprehension: float,
+        grade: str = "1st",
+    ) -> dict[str, Any]:
+        from .remediation import get_bulk_remediations
+        from .schemas import SimpleViewResult
+
+        if decoding >= 0.60 and language_comprehension >= 0.60:
+            profile = "typical"
+        elif decoding < 0.60 and language_comprehension >= 0.60:
+            profile = "dyslexia"
+        elif decoding >= 0.60 and language_comprehension < 0.60:
+            profile = "hyperlexic"
+        else:
+            profile = "garden_variety"
+
+        deficit_codes: list[str] = []
+        if decoding < 0.60:
+            if decoding < 0.30:
+                deficit_codes = ["phoneme_segmentation", "cvc_mixed", "cvc_short_a"]
+            elif decoding < 0.45:
+                deficit_codes = ["cvc_mixed", "consonant_blends", "consonant_digraphs"]
+            else:
+                deficit_codes = ["cvce_silent_e", "vowel_teams", "r_controlled"]
+
+        diagnostic = SimpleViewResult(
+            decoding_score=decoding,
+            language_comprehension_score=language_comprehension,
+            reading_profile=profile,
+            deficit_codes=deficit_codes,
+        )
+
+        remediations = []
+        if decoding < 0.60:
+            remediations = get_bulk_remediations(deficit_codes, grade)
+
+        if profile == "typical":
+            next_steps = "Student is on track. Continue grade-level instruction."
+        elif profile == "dyslexia":
+            next_steps = (
+                f"Decoding deficit (score={decoding:.2f}). Use attached "
+                f"{len(remediations)} remediation cards 4-5x/week. "
+                "Administer CORE Phonics Survey. Consider Tier 2."
+            )
+        elif profile == "hyperlexic":
+            next_steps = (
+                "Strong decoder, weak comprehender. Focus on vocabulary, "
+                "background knowledge, and read-alouds with discussion."
+            )
+        else:
+            next_steps = (
+                "Dual deficit. Prioritize decoding, layer comprehension. "
+                "Tier 2 or Tier 3 intervention recommended."
+            )
+
+        return {
+            "diagnostic": diagnostic.model_dump(),
+            "remediations": [r.to_markdown() for r in remediations],
+            "next_steps": next_steps,
+        }
+
+    @server.tool(
+        name="get_instructional_remediation",
+        description=(
+            "Generate a complete instructional remediation card. Returns: "
+            "Micro-PD, I Do/We Do/You Do script, multisensory cue, word chain, "
+            "corrective feedback. Deterministic — no LLM hallucinations."
+        ),
+    )
+    async def get_remediation(
+        deficit_code: str,
+        grade_level: str = "1st",
+    ) -> dict[str, Any]:
+        from .remediation import get_instructional_remediation as get_card
+        card = get_card(deficit_code, grade_level)
+        return {"card": card.model_dump(), "markdown": card.to_markdown()}
+
+    @server.tool(
+        name="recommend_decodable_resources",
+        description=(
+            "Recommend decodable passages constrained to mastered skills. "
+            "Passages are pre-written templates with no untaught patterns."
+        ),
+    )
+    async def recommend_resources(
+        mastered_skills: str,
+        target_phoneme: str,
+        topic_interest: str = "",
+    ) -> dict[str, Any]:
+        from .decodable_resources import recommend_decodable_resources as rec
+        skills = [s.strip() for s in mastered_skills.split(",") if s.strip()]
+        topic = topic_interest.strip() or None
+        return rec(skills, target_phoneme, topic).model_dump()
+
+    @server.tool(
+        name="list_remediations",
+        description="List all available remediation deficit codes and skill names.",
+    )
+    async def list_remediations() -> dict[str, Any]:
+        from .remediation import list_available_remediations as list_r
+        return list_r()
 
 
 # Register tools on the default stdio server
