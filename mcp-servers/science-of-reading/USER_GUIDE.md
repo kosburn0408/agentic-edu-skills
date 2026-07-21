@@ -2,12 +2,15 @@
 
 ## What Is This?
 
-A tool that analyzes any text through the lens of the **Science of Reading** — the body of research on how children learn to read. Teachers upload a passage and instantly get:
+A tool that analyzes any text through the lens of the **Science of Reading** — the body of research on how children learn to read. Teachers get:
 
 - **Lexile score** — how hard is this text?
 - **Decodability** — what percentage of words can a K-3 student sound out?
 - **Vocabulary tiers** — which words are everyday, academic, or domain-specific?
 - **Evidence alignment** — does this approach match what research says works?
+- **🆕 Remediation cards** — printable I Do/We Do/You Do scripts for struggling readers
+- **🆕 Simple View diagnostic** — profile students + auto-generate lesson plans
+- **🆕 Decodable passages** — skill-constrained texts that won't trip students up
 
 It runs as a Docker container on your computer. No cloud, no subscription, no data leaving your machine.
 
@@ -172,6 +175,62 @@ d = check_decodability(text, grade=1)
 print(f"{d['decodable_pct']}% decodable")
 if d['decodable_pct'] < 80:
     print("⚠️ May need support for:", d['non_decodable'])
+```
+
+---
+
+## 🆕 Instructional Remediation
+
+### Diagnose a Struggling Reader
+
+> *"My 2nd grader reads choppy and guesses at words. How do I help?"*
+
+```python
+from tools.remediation import get_instructional_remediation
+
+# Step 1: Diagnose with Simple View of Reading
+# evaluate_simple_view(decoding=0.35, comprehension=0.75, grade="2nd")
+# → Profile: dyslexia → 3 deficit codes auto-generated
+
+# Step 2: Get a remediation card
+card = get_instructional_remediation("cvce_silent_e", "2nd")
+print(card.to_markdown())
+```
+
+**What you get — a printable card with:**
+- 📋 **Micro-PD** — 2-sentence explainer of the reading principle
+- 🎯 **I Do / We Do / You Do** — 5-minute script for small-group instruction
+- 👆 **Multisensory Cue** — kinesthetic anchor (finger tapping, sound boxes, magic-e wand)
+- 🔗 **Word Chain** — 4-6 words for pattern practice
+- 💬 **Corrective Feedback** — exactly what to say for errors and successes
+- 📖 **Connected Text** — one decodable sentence using the target pattern
+
+### Available Remediations (9 Deficit Codes)
+
+| Code | Skill | Grade |
+|---|---|---|
+| `cvc_short_a` | Short Vowel /a/ | K-1 |
+| `cvc_mixed` | Mixed Short Vowels | K-1 |
+| `consonant_blends` | CCVC/CVCC Blends | 1-2 |
+| `cvce_silent_e` | Silent-e Pattern | 1-2 |
+| `consonant_digraphs` | sh, ch, th, wh, ck | K-1 |
+| `vowel_teams` | ai, ay, ee, ea, oa | 2-3 |
+| `r_controlled` | ar, or, er, ir, ur | 2-3 |
+| `phoneme_segmentation` | Phoneme Awareness | K-1 |
+| `prefix_un` | Prefix un- | 2-3 |
+
+### Get Decodable Passages
+
+> *"I need a short text my student can actually read — only using the sounds they know."*
+
+```python
+from tools.decodable_resources import recommend_decodable_resources
+result = recommend_decodable_resources(
+    mastered_skills=["cvc_mixed", "basic_sight_words"],
+    target_phoneme="short_a",
+    topic_interest="animals"
+)
+# → "Pat and the Cat" — 14 words, 100% decodable
 ```
 
 ---
