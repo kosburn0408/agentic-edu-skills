@@ -11,8 +11,9 @@ A tool that analyzes any text through the lens of the **Science of Reading** —
 - **🆕 Remediation cards** — printable I Do/We Do/You Do scripts for struggling readers
 - **🆕 Simple View diagnostic** — profile students + auto-generate lesson plans
 - **🆕 Decodable passages** — skill-constrained texts that won't trip students up
+- **🆕 FERPA privacy layer** — student names never reach the LLM
 
-It runs as a Docker container on your computer. No cloud, no subscription, no data leaving your machine.
+It runs as a Docker container on your computer. No cloud, no subscription, no data leaving your machine. **Student PII stays on your machine — always.**
 
 ---
 
@@ -232,6 +233,66 @@ result = recommend_decodable_resources(
 )
 # → "Pat and the Cat" — 14 words, 100% decodable
 ```
+
+---
+
+## 🔒 Student Privacy & FERPA Compliance
+
+The server enforces **Zero Data Retention (ZDR)** — student names and IDs never reach an LLM. Here's how it works:
+
+### The Privacy Flow
+
+```
+Teacher uploads: "Jane Doe, GA-12345, decoding=0.42"
+    ↓ anonymize_student_data()
+LLM sees:       "std_a3f27b8c, decoding=0.42"  ← NO real name
+    ↓ LLM generates remediation
+    ↓ deanonymize
+Teacher sees:   "Jane Doe needs: consonant blends" ← name restored
+    ↓ destroy_privacy_session()
+All PII erased from memory
+```
+
+### Using It
+
+```python
+from tools.privacy_sanitizer import get_pii_manager
+
+mgr = get_pii_manager()
+session = mgr.create_session("Tuesday reading groups")
+
+# Strip PII from student records
+student = {
+    "first_name": "Jane", "last_name": "Doe",
+    "state_student_id": "GA-12345",
+    "decoding_score": 0.42, "grade": "2nd"
+}
+student["_session_id"] = session
+clean = mgr.anonymize_student_record(student)
+# → {"student_token": "std_a3f27b8c", "decoding_score": 0.42, "grade": "2nd"}
+# ↑ Safe to send to LLM!
+
+# After LLM generates output:
+output = mgr.deanonymize_response_text(
+    "std_a3f27b8c needs consonant blend remediation", session
+)
+# → "Jane Doe needs consonant blend remediation"
+
+# When done — erase everything:
+mgr.destroy_session(session)
+```
+
+### What's Stripped (25 Fields)
+
+`first_name`, `last_name`, `full_name`, `state_student_id`, `email`, `dob`, `date_of_birth`, `address`, `phone`, `guardian_name`, `parent_name` — and more.
+
+### Compliance
+
+| Standard | Status |
+|---|---|
+| FERPA | ✅ Compliant |
+| COPPA | ✅ Compliant |
+| GDPR Right to Erasure | ✅ ZDR by default |
 
 ---
 
