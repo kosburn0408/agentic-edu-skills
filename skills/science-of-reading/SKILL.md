@@ -1,95 +1,81 @@
 ---
 name: science-of-reading
-description: "Evidence-based literacy support aligned to SoR research."
-version: 0.1.0
+description: "Check K-3 texts and lessons against Science of Reading research using the sor-mcp-server tools: scope-aware decodability, three-cueing detection, vocabulary tiers, screening profiles, and Georgia standards."
+version: 0.2.0
 author: Hermes
 metadata:
   hermes:
-    tags: [Literacy, Science-of-Reading, Education, K-5]
+    tags: [Literacy, Science-of-Reading, Education, K-3, Decodable-Text]
 ---
 
 # Science of Reading Agent
 
-Evidence-based literacy skill aligned to the Science of Reading (SoR) research. Validates instructional content against What Works Clearinghouse and Best Evidence Encyclopedia findings. Supports vocabulary selection, Lexile targeting, phonemic awareness, phonics, fluency, vocabulary, and comprehension — the five pillars of reading.
+Use the **science-of-reading MCP server** ([kosburn0408/sor-mcp-server](https://github.com/kosburn0408/sor-mcp-server)) for every claim about a text. Its tools are deterministic and show their working, so the agent reports what the tools found rather than estimating.
 
-Load `what-works-clearinghouse` and `best-evidence-encyclopedia` alongside this skill for full evidence-based validation.
+Load `what-works-clearinghouse` and `best-evidence-encyclopedia` alongside this skill when the user asks what the research says about a program or practice.
 
 ## When to Use
 
-- "Is this text appropriate for [grade level] readers?"
-- "What vocabulary words should I target for Lexile [X]?"
-- "Check this passage for SoR alignment"
-- "Suggest decodable text for early readers"
-- "Analyze this children's book for literacy best practices"
+- "Can a first grader in unit 3 read this passage?"
+- "Write a decodable story for grade 1, unit 5"
+- "Check this lesson script for three-cueing prompts"
+- "Which Tier 2 words in this read-aloud should I pre-teach?"
+- "Which Georgia standard does this phonics lesson address?"
+- "Review this children's book manuscript for early readers"
 
 ## Prerequisites
 
-- `what-works-clearinghouse` skill (for WWC evidence)
-- `best-evidence-encyclopedia` skill (for BEE ratings)
-- Pandoc installed for text analysis
+- The `science-of-reading` MCP server is connected (see the repo README for config).
+- For results that match a district's program, the server's `SOR_SCOPE_PATH` points at that program's scope & sequence. Otherwise the server uses an illustrative default sequence; say so in the answer.
 
-## Quick Reference
+## Tools
 
-| Pillar | Research Basis | Implementation |
+| Need | Tool | Notes |
 |---|---|---|
-| Phonemic Awareness | WWC Practice Guide: Foundational Skills | Rhyme, alliteration, sound isolation |
-| Phonics | BEE Reading/Elementary | Decodable text, sound-symbol mapping |
-| Fluency | WWC: Repeated Reading | Page-turning cadence, read-aloud pacing |
-| Vocabulary | WWC: Explicit Instruction | Contextual word introduction, tiered vocabulary |
-| Comprehension | WWC: Question Generation | Parent prompts, embedded questions |
+| What students have been taught | `get_phonics_scope(grade_level, unit)` | Cumulative patterns and heart words |
+| Can students decode this text? | `verify_decodable_text(text, grade_level, unit, target_pct=90, min_decodable_pct=None)` | Per-word status, missing patterns, irregular words, three-cueing flags |
+| How a word maps to sounds | `map_orthography(words)` | e.g. `ch - a - t → /ch/ /ă/ /t/` |
+| Rough difficulty of longer text | `estimate_readability(text)` | Flesch-Kincaid. Not a Lexile measure, and not meaningful for K-2 text |
+| Vocabulary to pre-teach | `classify_vocabulary(text)` | Beck Tier 1/2/3 |
+| Screening profile | `evaluate_simple_view(decoding_score, language_comp_score, cutoff, diagnosed_skills)` | Screening, not diagnosis |
+| Intervention script | `get_instructional_remediation(deficit_code)` | I Do / We Do / You Do |
+| Standards | `align_standards(description, state="GA", grade)` | Georgia: current K-12 ELA via SuitCASE |
+| Research | `search_evidence(topic)` | Small curated set; check sources before citing |
+| Remove student identifiers | `sanitize_pii(record)` | Run before any student data reaches the model |
 
 ## Procedure
 
-### 1. Analyze Text Complexity
+### 1. Check a passage
 
-Load the manuscript and run Lexile analysis:
+1. Ask for (or infer and state) the grade and unit the students have reached.
+2. Call `verify_decodable_text`. Report:
+   - `decodable_pct` and `accessible_pct` against `target_pct` (and `min_decodable_pct` if the district uses one)
+   - `missing_patterns`: the untaught pattern behind each blocked word, so the teacher can swap words or teach the pattern first
+   - `irregular_words` to pre-teach as heart words or replace
+   - `not_in_dictionary_words` (usually names) for the teacher to check
+   - any `cueing_flags`, with the suggested replacement prompts
 
-```bash
-pandoc manuscript.md -t plain | python3 -c "
-import re, sys
-text = sys.stdin.read()
-words = re.findall(r'\b\w+\b', text.lower())
-sentences = re.split(r'[.!?]+', text)
-unique = len(set(words))
-avg_sentence = len(words) / max(len(sentences), 1)
-print(f'Words: {len(words)} | Unique: {unique}')
-print(f'Avg sentence length: {avg_sentence:.1f}')
-print(f'Estimated Lexile: {int(200 + avg_sentence * 12 - (unique/len(words))*100)}L')
-"
-```
+### 2. Write a decodable passage
 
-### 2. Validate Vocabulary
+Use the `generate_aligned_decodable` prompt, or follow the same loop: get the scope, draft, call `verify_decodable_text`, replace every flagged word, and verify again until `meets_target` is true. Never call a passage decodable without a passing result.
 
-Check that vocabulary words match SoR tier framework:
-- **Tier 1**: Common words (dog, river, park) — should dominate early chapters
-- **Tier 2**: Academic words (observe, investigate, protect) — scaffolded through context
-- **Tier 3**: Domain-specific (tributary, conservation, ecosystem) — introduced with definitions
+### 3. Review a children's book manuscript
 
-### 3. Check Decodability
+For each chapter: run `verify_decodable_text` at the intended grade/unit (early-reader books), `classify_vocabulary` for Tier 2 words worth a parent prompt, and `estimate_readability` only for chapters long enough (100+ words) and above grade 2.
 
-For K-2 readers, ensure early chapters have high percentage of decodable words:
+### 4. Align to standards
 
-```bash
-grep -o '\b\w\w\w\w*\b' text.txt | sort | uniq -c | sort -rn | head -20
-```
-
-### 4. Align with SoR Pillars
-
-For each chapter, verify coverage of the five pillars:
-
-| Chapter | Phonemic Awareness | Phonics | Fluency | Vocabulary | Comprehension |
-|---|---|---|---|---|---|
+Call `align_standards(description, "GA", grade)`. Read the `notices`: they say whether the codes are current (SuitCASE) or legacy.
 
 ## Pitfalls
 
-- **Lexile ≠ quality** — A low Lexile doesn't mean low quality; it means accessibility
-- **Decodable ≠ boring** — Rich stories can still use decodable text
-- **SoR is not one method** — It's a body of research, not a specific curriculum
+- **Decodability depends on the scope.** The same passage is decodable in unit 8 and not in unit 3. Always state the grade, unit and scope source.
+- **Readability formulas are not decodability.** Don't use Flesch-Kincaid or Lexile to judge K-2 text.
+- **Screening is not diagnosis.** Never say a student "has dyslexia" from `evaluate_simple_view`.
+- **No three-cueing.** Don't suggest "look at the picture", "what would make sense", or "skip it and come back".
+- **SoR is a body of research, not one program.**
 
 ## Verification
 
-```bash
-# Verify WWC and BEE skills are available
-skill_view(name='what-works-clearinghouse') && echo "WWC ready"
-skill_view(name='best-evidence-encyclopedia') && echo "BEE ready"
-```
+- `get_phonics_scope("1", "3")` returns `status: ok` with taught patterns.
+- `verify_decodable_text("Tomorrow the beautiful knight laughed loudly.", "2", "8")` does not meet the target and lists `beautiful` and `laughed` as irregular.

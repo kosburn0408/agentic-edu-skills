@@ -1,3 +1,5 @@
+> **⚠️ Outdated copy — do not deploy.** The maintained Science of Reading MCP server is [kosburn0408/sor-mcp-server](https://github.com/kosburn0408/sor-mcp-server). This older copy uses a regex decodability check that passes far-off-scope text, a homemade "Lexile" formula, and compliance claims that were removed upstream. Point Hermes and other clients at the canonical repo instead.
+
 # Science of Reading MCP Server
 
 [![MCP](https://img.shields.io/badge/MCP-1.26+-blue)](https://modelcontextprotocol.io)

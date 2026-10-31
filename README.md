@@ -17,8 +17,7 @@ An open repository of agent skills, MCP servers, and AI agents purpose-built for
 ### Literacy & Reading
 | Skill | Description |
 |---|---|
-| `science-of-reading` | Evidence-based literacy skill aligned to WWC and BEE |
-| `lexile-analyzer` | Analyze text readability and suggest Lexile-appropriate vocabulary |
+| `science-of-reading` | Check K-3 texts and lessons with the sor-mcp-server tools (scope-aware decodability, three-cueing detection, vocabulary tiers, Georgia standards) |
 | `hooch-reader` | Science of Reading-aligned EPUB reader with embedded xAPI |
 
 ### Standards & Curriculum
@@ -44,6 +43,7 @@ An open repository of agent skills, MCP servers, and AI agents purpose-built for
 
 | Server | Description |
 |---|---|
+| `science-of-reading` | Canonical code: [kosburn0408/sor-mcp-server](https://github.com/kosburn0408/sor-mcp-server). The copy in `mcp-servers/science-of-reading/` is outdated |
 | `case-api` | MCP server for the Georgia CASE REST API |
 | `lrs-api` | MCP server for SQL LRS xAPI queries |
 
